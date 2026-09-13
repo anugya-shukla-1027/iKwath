@@ -1,0 +1,793 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>iKwath — Smart Kadha Brewing Machine · SIH26048</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0f172a;
+    --bg-raise:#141f38;
+    --bg-panel:#182541;
+    --bg-panel-2:#1e2c4d;
+    --line:#28395d;
+    --line-soft:#20304f;
+    --emerald:#22c55e;
+    --emerald-soft:rgba(34,197,94,0.14);
+    --emerald-glow:rgba(34,197,94,0.45);
+    --cyan:#38bdf8;
+    --cyan-soft:rgba(56,189,248,0.14);
+    --cyan-glow:rgba(56,189,248,0.45);
+    --amber:#d97757;
+    --ink:#e7edf7;
+    --ink-dim:#9fb0cc;
+    --ink-faint:#64789e;
+    --danger:#f87171;
+    --font-head: 'Space Grotesk', sans-serif;
+    --font-mono: 'IBM Plex Mono', monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(1100px 620px at 14% -8%, rgba(56,189,248,0.10), transparent 60%),
+      radial-gradient(900px 560px at 100% 0%, rgba(34,197,94,0.08), transparent 55%),
+      var(--bg);
+    color:var(--ink);
+    font-family:var(--font-head);
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--emerald-soft); color:var(--ink);}
+
+  .app{max-width:1180px; margin:0 auto; padding:22px 24px 60px;}
+
+  /* ---------- Top bar ---------- */
+  .topbar{
+    display:flex; align-items:center; justify-content:space-between;
+    gap:20px; flex-wrap:wrap;
+    padding-bottom:16px;
+  }
+  .brand{display:flex; align-items:center; gap:12px;}
+  .brand-mark{
+    width:42px; height:42px; border-radius:11px;
+    background:linear-gradient(155deg, var(--emerald), var(--cyan));
+    display:flex; align-items:center; justify-content:center;
+    font-weight:700; font-size:15px; color:#08131f; letter-spacing:-0.5px;
+    box-shadow:0 0 0 1px rgba(255,255,255,0.06), 0 8px 20px -8px rgba(34,197,94,0.6);
+    flex-shrink:0;
+  }
+  .brand-name{font-size:19px; font-weight:700; letter-spacing:-0.2px; line-height:1.1;}
+  .brand-sub{font-family:var(--font-mono); font-size:11px; color:var(--ink-faint); margin-top:3px; letter-spacing:0.2px;}
+
+  .scene-tabs{
+    display:flex; gap:6px; background:var(--bg-raise); padding:5px;
+    border-radius:12px; border:1px solid var(--line-soft);
+  }
+  .tab{
+    appearance:none; border:none; background:transparent; color:var(--ink-dim);
+    font-family:var(--font-head); font-size:13px; font-weight:500;
+    padding:9px 14px; border-radius:8px; cursor:pointer;
+    transition:background 0.2s ease, color 0.2s ease;
+    white-space:nowrap;
+  }
+  .tab:hover{color:var(--ink);}
+  .tab.active{background:var(--bg-panel-2); color:var(--ink); box-shadow:inset 0 0 0 1px var(--line);}
+  .tab .tab-num{color:var(--cyan); margin-right:6px; font-family:var(--font-mono);}
+  .tab.active .tab-num{color:var(--emerald);}
+
+  .playback{display:flex; align-items:center; gap:10px;}
+  .play-btn{
+    display:flex; align-items:center; gap:8px;
+    background:var(--emerald-soft); border:1px solid rgba(34,197,94,0.4);
+    color:var(--emerald); font-family:var(--font-head); font-weight:600; font-size:13px;
+    padding:10px 16px; border-radius:10px; cursor:pointer;
+    transition:all 0.2s ease;
+  }
+  .play-btn:hover{background:rgba(34,197,94,0.22);}
+  .play-btn.paused{background:var(--cyan-soft); border-color:rgba(56,189,248,0.4); color:var(--cyan);}
+  .play-btn svg{width:14px; height:14px; flex-shrink:0;}
+
+  .progress-rail{height:3px; background:var(--line-soft); border-radius:3px; overflow:hidden; margin-bottom:26px;}
+  .progress-fill{
+    height:100%; width:0%; background:linear-gradient(90deg, var(--cyan), var(--emerald));
+    transition:width 0.1s linear;
+  }
+
+  /* ---------- Scene shell ---------- */
+  .scene{display:none; animation:sceneIn 0.5s ease both;}
+  .scene.active{display:block;}
+  @keyframes sceneIn{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);}}
+
+  .scene-head{margin-bottom:22px;}
+  .scene-eyebrow{
+    font-family:var(--font-mono); font-size:11px; color:var(--ink-faint);
+    display:flex; align-items:center; gap:8px; margin-bottom:6px;
+  }
+  .scene-eyebrow .dot{width:5px; height:5px; border-radius:50%; background:var(--cyan);}
+  .scene-title{font-size:27px; font-weight:700; letter-spacing:-0.4px; margin:0;}
+  .scene-title .accent{color:var(--emerald);}
+
+  .scene-grid{
+    display:grid; grid-template-columns:1.35fr 1fr; gap:22px; align-items:start;
+  }
+  @media(max-width:880px){ .scene-grid{grid-template-columns:1fr;} }
+
+  .diagram-panel{
+    background:var(--bg-panel); border:1px solid var(--line); border-radius:16px;
+    padding:20px; position:relative; overflow:hidden;
+    min-height:440px; display:flex; align-items:center; justify-content:center;
+  }
+  .diagram-panel::before{
+    content:""; position:absolute; inset:0;
+    background-image:linear-gradient(var(--line-soft) 1px, transparent 1px), linear-gradient(90deg, var(--line-soft) 1px, transparent 1px);
+    background-size:26px 26px; opacity:0.35; pointer-events:none;
+  }
+  .diagram-panel svg{position:relative; z-index:1; max-width:100%; height:auto;}
+
+  .side-col{display:flex; flex-direction:column; gap:14px;}
+
+  .callout-card{
+    background:var(--bg-panel); border:1px solid var(--line); border-radius:14px;
+    padding:16px 17px;
+  }
+  .callout-card h3{
+    margin:0 0 4px; font-size:13px; font-weight:600; color:var(--ink-faint);
+    text-transform:none; letter-spacing:0.2px;
+  }
+
+  .step-list{display:flex; flex-direction:column; gap:12px;}
+  .step-item{display:flex; gap:12px; align-items:flex-start;}
+  .step-badge{
+    flex-shrink:0; width:26px; height:26px; border-radius:8px;
+    background:var(--emerald-soft); border:1px solid rgba(34,197,94,0.35);
+    color:var(--emerald); font-family:var(--font-mono); font-size:12px; font-weight:600;
+    display:flex; align-items:center; justify-content:center;
+  }
+  .step-text{font-size:14px; line-height:1.5; color:var(--ink); padding-top:2px;}
+  .step-text b{color:var(--ink); font-weight:600;}
+
+  .note-card{
+    background:linear-gradient(160deg, var(--cyan-soft), transparent);
+    border:1px solid rgba(56,189,248,0.35); border-radius:14px; padding:16px 17px;
+  }
+  .note-card .note-label{
+    font-family:var(--font-mono); font-size:11px; color:var(--cyan); margin-bottom:6px; display:block;
+  }
+  .note-card p{margin:0; font-size:14px; line-height:1.55; color:var(--ink);}
+  .note-card .num{color:var(--cyan); font-family:var(--font-mono); font-weight:600;}
+
+  .legend{display:flex; flex-direction:column; gap:9px;}
+  .legend-item{display:flex; align-items:center; gap:10px; font-size:13px; color:var(--ink-dim);}
+  .legend-swatch{width:10px; height:10px; border-radius:3px; flex-shrink:0;}
+
+  /* ---------- hotspots (scene 1) ---------- */
+  .hotspot{cursor:pointer;}
+  .hotspot circle.ring{animation:pulse 2.2s ease-in-out infinite;}
+  @keyframes pulse{0%,100%{opacity:0.35; r:9;} 50%{opacity:0.9; r:12;}}
+  .hs-label{font-family:var(--font-mono); font-size:9.5px; fill:var(--ink-dim);}
+
+  /* bubbles */
+  .bubble{animation:rise 3s linear infinite; opacity:0;}
+  .scene1-root.is-brewing .bubble{opacity:1;}
+  @keyframes rise{
+    0%{transform:translateY(0); opacity:0;}
+    15%{opacity:0.85;}
+    100%{transform:translateY(-70px); opacity:0;}
+  }
+  .oled-cursor{animation:blink 1s step-end infinite;}
+  @keyframes blink{50%{opacity:0;}}
+
+  /* connector flow lines - scene 2 */
+  .flow-line{stroke-dasharray:6 6; animation:flow 1.1s linear infinite;}
+  @keyframes flow{to{stroke-dashoffset:-24;}}
+  .flow-line.slow{animation-duration:2s;}
+  .comp-box{fill:var(--bg-panel-2); stroke:var(--line);}
+  .comp-label{font-family:var(--font-mono); font-size:10.5px; fill:var(--ink); font-weight:500;}
+  .comp-sub{font-family:var(--font-mono); font-size:8.5px; fill:var(--ink-faint);}
+  .spin-slow{transform-origin:center; animation:spin 2.6s linear infinite;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+
+  /* scene 3 */
+  .timeline{display:flex; align-items:center; gap:0; margin-bottom:22px;}
+  .tl-node{
+    display:flex; flex-direction:column; align-items:center; gap:8px; flex:1; text-align:center;
+  }
+  .tl-circle{
+    width:44px; height:44px; border-radius:50%; background:var(--bg-panel-2);
+    border:1.5px solid var(--cyan); display:flex; align-items:center; justify-content:center;
+    font-family:var(--font-mono); color:var(--cyan); font-weight:600; font-size:15px;
+    box-shadow:0 0 0 6px rgba(56,189,248,0.08);
+  }
+  .tl-node:nth-child(3) .tl-circle{border-color:var(--emerald); color:var(--emerald); box-shadow:0 0 0 6px rgba(34,197,94,0.08);}
+  .tl-line{height:1.5px; flex:0.6; background:repeating-linear-gradient(90deg, var(--line) 0 6px, transparent 6px 12px); margin-top:-30px;}
+  .tl-label{font-size:12.5px; color:var(--ink-dim); max-width:150px; line-height:1.4;}
+
+  .sim-box{
+    background:var(--bg-panel); border:1px solid var(--line); border-radius:16px; padding:22px;
+  }
+  .sim-head{display:flex; align-items:center; justify-content:space-between; margin-bottom:16px; gap:12px; flex-wrap:wrap;}
+  .sim-head h3{margin:0; font-size:15px; font-weight:600;}
+  .run-btn{
+    background:var(--emerald); color:#062012; border:none; font-family:var(--font-head);
+    font-weight:700; font-size:13px; padding:10px 18px; border-radius:9px; cursor:pointer;
+    transition:filter 0.15s ease, transform 0.15s ease;
+  }
+  .run-btn:hover:not(:disabled){filter:brightness(1.08);}
+  .run-btn:active:not(:disabled){transform:scale(0.98);}
+  .run-btn:disabled{opacity:0.55; cursor:default;}
+
+  .voltage-row{
+    display:grid; grid-template-columns:repeat(4,1fr); gap:8px; margin-bottom:14px;
+  }
+  .v-chip{
+    background:var(--bg-raise); border:1px solid var(--line-soft); border-radius:9px;
+    padding:9px 6px; text-align:center; font-family:var(--font-mono); font-size:12px;
+    color:var(--ink-dim);
+  }
+  .v-chip .v-name{display:block; font-size:9.5px; color:var(--ink-faint); margin-bottom:3px;}
+  .v-chip .v-val{color:var(--cyan); font-weight:600;}
+
+  .sim-progress-rail{height:8px; border-radius:5px; background:var(--bg-raise); overflow:hidden; margin-bottom:14px; border:1px solid var(--line-soft);}
+  .sim-progress-fill{height:100%; width:0%; background:linear-gradient(90deg, var(--cyan), var(--emerald)); transition:width 0.25s ease;}
+
+  .sim-status{
+    font-family:var(--font-mono); font-size:12.5px; color:var(--ink-faint); min-height:20px;
+  }
+  .sim-result{
+    display:flex; align-items:center; gap:10px; margin-top:6px;
+    background:var(--emerald-soft); border:1px solid rgba(34,197,94,0.4);
+    border-radius:10px; padding:12px 14px; opacity:0; transform:translateY(4px);
+    transition:opacity 0.4s ease, transform 0.4s ease;
+  }
+  .sim-result.show{opacity:1; transform:translateY(0);}
+  .sim-result .check{
+    width:20px; height:20px; border-radius:50%; background:var(--emerald); flex-shrink:0;
+    display:flex; align-items:center; justify-content:center; color:#062012; font-size:12px; font-weight:800;
+  }
+  .sim-result .sr-text{font-family:var(--font-mono); font-size:13px; color:var(--emerald); font-weight:600;}
+
+  /* scene 4 */
+  .gauge-wrap{display:flex; flex-direction:column; align-items:center; gap:6px;}
+  .needle{transform-origin:210px 210px; animation:needleSweep 4.5s ease-in-out infinite alternate;}
+  @keyframes needleSweep{
+    0%{transform:rotate(-8deg);}
+    100%{transform:rotate(8deg);}
+  }
+  .gauge-readout{font-family:var(--font-mono); font-size:13px; color:var(--ink-faint); margin-top:-6px;}
+  .gauge-readout .lockval{color:var(--emerald); font-weight:600; font-size:15px;}
+
+  .stirrer-motor{transform-origin:center; animation:spin 1.05s linear infinite;}
+
+  .interlock-btn{
+    background:transparent; border:1px solid var(--line); color:var(--ink-dim);
+    font-family:var(--font-mono); font-size:12px; padding:9px 13px; border-radius:9px; cursor:pointer;
+    transition:all 0.2s ease;
+  }
+  .interlock-btn:hover{border-color:var(--danger); color:var(--danger);}
+
+  .led{width:9px; height:9px; border-radius:50%; background:var(--emerald); box-shadow:0 0 8px var(--emerald-glow); flex-shrink:0;}
+  .led.alert{background:var(--danger); box-shadow:0 0 8px rgba(248,113,113,0.6); animation:ledBlink 0.5s step-end infinite;}
+  @keyframes ledBlink{50%{opacity:0.25;}}
+  .interlock-row{display:flex; align-items:center; gap:10px; font-size:13px; color:var(--ink-dim); font-family:var(--font-mono);}
+  .interlock-row.alert-text{color:var(--danger);}
+
+  .footer-note{
+    margin-top:34px; text-align:center; font-family:var(--font-mono); font-size:11px; color:var(--ink-faint);
+  }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-mark">iK</div>
+      <div>
+        <div class="brand-name">iKwath</div>
+        <div class="brand-sub">Team Prakriti Tech · SIH 2026 · PS: SIH26048</div>
+      </div>
+    </div>
+
+    <nav class="scene-tabs" id="sceneTabs">
+      <button class="tab active" data-scene="1"><span class="tab-num">01</span>Outer Design</button>
+      <button class="tab" data-scene="2"><span class="tab-num">02</span>Hardware</button>
+      <button class="tab" data-scene="3"><span class="tab-num">03</span>Quality Gate</button>
+      <button class="tab" data-scene="4"><span class="tab-num">04</span>Extraction</button>
+    </nav>
+
+    <div class="playback">
+      <button class="play-btn" id="playPauseBtn">
+        <svg id="playIcon" viewBox="0 0 24 24" fill="none"><path d="M6 4L20 12L6 20V4Z" fill="currentColor"/></svg>
+        <span id="playLabel">Pause</span>
+      </button>
+    </div>
+  </header>
+
+  <div class="progress-rail"><div class="progress-fill" id="progressFill"></div></div>
+
+  <main class="stage">
+
+    <!-- ============ SCENE 1 ============ -->
+    <section class="scene active" id="scene-1">
+      <div class="scene-head">
+        <div class="scene-eyebrow"><span class="dot"></span>SCENE 1 · MACHINE EXTERIOR &amp; OUTER OPERATION</div>
+        <h1 class="scene-title">1. Outer Design &amp; <span class="accent">User Interface</span></h1>
+      </div>
+
+      <div class="scene-grid">
+        <div class="diagram-panel">
+          <svg class="scene1-root" id="scene1Root" viewBox="0 0 420 500" width="380">
+            <!-- outer shell -->
+            <rect x="70" y="30" width="280" height="440" rx="30" fill="#182541" stroke="#28395d" stroke-width="1.5"/>
+            <!-- pod chamber -->
+            <g class="hotspot" data-label="Top Herb Pod Chamber — loads coarse herb powder">
+              <rect x="150" y="46" width="120" height="58" rx="10" fill="#0e1830" stroke="#38bdf8" stroke-width="1.2"/>
+              <line x1="168" y1="60" x2="252" y2="60" stroke="#28395d" stroke-width="2"/>
+              <line x1="168" y1="72" x2="252" y2="72" stroke="#28395d" stroke-width="2"/>
+              <line x1="168" y1="84" x2="230" y2="84" stroke="#28395d" stroke-width="2"/>
+              <circle class="ring" cx="264" cy="52" r="9" fill="none" stroke="#38bdf8" stroke-width="1.4"/>
+              <text x="210" y="118" text-anchor="middle" class="hs-label" fill="#9fb0cc">HERB POD CHAMBER</text>
+            </g>
+
+            <!-- OLED -->
+            <g class="hotspot" data-label="OLED Front Touch Display — live brew status">
+              <rect x="105" y="136" width="210" height="86" rx="9" fill="#040d1a" stroke="#22c55e" stroke-width="1.3"/>
+              <text id="oledTemp" x="120" y="182" font-family="IBM Plex Mono" font-size="26" font-weight="600" fill="#38bdf8">88.0°C</text>
+              <text id="oledStatus" x="120" y="204" font-family="IBM Plex Mono" font-size="12" fill="#22c55e">BREWING<tspan class="oled-cursor">_</tspan></text>
+              <circle class="ring" cx="300" cy="150" r="9" fill="none" stroke="#22c55e" stroke-width="1.4"/>
+            </g>
+            <text x="210" y="238" text-anchor="middle" class="hs-label">OLED TOUCH DISPLAY</text>
+
+            <!-- reservoir tube -->
+            <rect x="88" y="250" width="18" height="150" rx="6" fill="#0e1830" stroke="#28395d"/>
+            <rect x="91" y="330" width="12" height="66" fill="#38bdf8" opacity="0.35"/>
+
+            <!-- carafe -->
+            <g class="hotspot" data-label="Clear Glass Extraction Carafe — brewed kadha collects here">
+              <path d="M155 260 L265 260 L250 420 Q210 438 170 420 Z" fill="#0e1830" stroke="#9fb0cc" stroke-width="1.2" opacity="0.5"/>
+              <clipPath id="carafeClip"><path d="M158 264 L262 264 L248 415 Q210 431 172 415 Z"/></clipPath>
+              <g clip-path="url(#carafeClip)">
+                <rect id="liquidLevel" x="158" y="330" width="104" height="100" fill="#c2793f" opacity="0.85"/>
+                <rect x="158" y="330" width="104" height="4" fill="#e0a05f" opacity="0.6"/>
+                <circle class="bubble" cx="185" cy="410" r="3" fill="#f2c085"/>
+                <circle class="bubble" cx="205" cy="400" r="2.4" fill="#f2c085" style="animation-delay:0.6s"/>
+                <circle class="bubble" cx="225" cy="415" r="3.2" fill="#f2c085" style="animation-delay:1.2s"/>
+                <circle class="bubble" cx="240" cy="395" r="2.2" fill="#f2c085" style="animation-delay:1.8s"/>
+              </g>
+              <circle class="ring" cx="272" cy="270" r="9" fill="none" stroke="#9fb0cc" stroke-width="1.2"/>
+            </g>
+            <text x="210" y="452" text-anchor="middle" class="hs-label">GLASS EXTRACTION CARAFE</text>
+
+            <!-- power button -->
+            <g class="hotspot" id="powerBtn" style="cursor:pointer;" data-label="Power / Start — tap to begin brew cycle">
+              <circle cx="210" cy="466" r="0" fill="none"/>
+            </g>
+          </svg>
+
+          <!-- power button overlay for real click target, positioned via svg coords roughly -->
+          <button id="powerButtonHtml" title="Power / Start" style="
+            position:absolute; left:50%; bottom:26px; transform:translateX(-3px);
+            width:40px; height:40px; border-radius:50%; background:#182541; border:1.6px solid #22c55e;
+            color:#22c55e; cursor:pointer; display:flex; align-items:center; justify-content:center;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 2V12" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/><path d="M6.5 5.5a8 8 0 1 0 11 0" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+
+        <div class="side-col">
+          <div class="callout-card">
+            <h3>Operation Callouts</h3>
+            <div class="step-list" style="margin-top:10px;">
+              <div class="step-item">
+                <div class="step-badge">A</div>
+                <div class="step-text">Fill <b>350ml water</b> into the reservoir and insert the herb pod into the top chamber.</div>
+              </div>
+              <div class="step-item">
+                <div class="step-badge">B</div>
+                <div class="step-text">Press <b>Start</b> on the OLED panel — tap the power ring below the diagram to try it.</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="callout-card">
+            <h3>Diagram Legend</h3>
+            <div class="legend" style="margin-top:10px;">
+              <div class="legend-item"><span class="legend-swatch" style="background:#38bdf8;"></span>Herb Pod Chamber</div>
+              <div class="legend-item"><span class="legend-swatch" style="background:#22c55e;"></span>OLED Touch Display</div>
+              <div class="legend-item"><span class="legend-swatch" style="background:#c2793f;"></span>Extraction Carafe</div>
+            </div>
+          </div>
+
+          <div class="note-card">
+            <span class="note-label">TIP</span>
+            <p>Hover any glowing ring on the diagram, or tap the power button, to see the machine respond in real time.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ SCENE 2 ============ -->
+    <section class="scene" id="scene-2">
+      <div class="scene-head">
+        <div class="scene-eyebrow"><span class="dot" style="background:#22c55e;"></span>SCENE 2 · INSIDE HARDWARE ARCHITECTURE (X-RAY VIEW)</div>
+        <h1 class="scene-title">2. Internal Electronics &amp; <span class="accent">Sensors</span></h1>
+      </div>
+
+      <div class="scene-grid">
+        <div class="diagram-panel">
+          <svg viewBox="0 0 460 460" width="420">
+            <!-- faint body outline -->
+            <rect x="30" y="20" width="400" height="420" rx="26" fill="none" stroke="#28395d" stroke-width="1" stroke-dasharray="3 5" opacity="0.7"/>
+
+            <!-- e-tongue probes / sample chamber -->
+            <rect x="150" y="40" width="160" height="70" rx="8" class="comp-box" stroke-width="1.3"/>
+            <text x="230" y="62" text-anchor="middle" class="comp-label">E-TONGUE PROBES</text>
+            <text x="230" y="76" text-anchor="middle" class="comp-sub">4-channel · sample chamber</text>
+            <line x1="175" y1="86" x2="175" y2="102" stroke="#38bdf8" stroke-width="2"/>
+            <line x1="195" y1="86" x2="195" y2="102" stroke="#38bdf8" stroke-width="2"/>
+            <line x1="230" y1="86" x2="230" y2="102" stroke="#38bdf8" stroke-width="2"/>
+            <line x1="265" y1="86" x2="265" y2="102" stroke="#38bdf8" stroke-width="2"/>
+            <circle cx="175" cy="104" r="2.4" fill="#38bdf8"/><circle cx="195" cy="104" r="2.4" fill="#38bdf8"/>
+            <circle cx="230" cy="104" r="2.4" fill="#38bdf8"/><circle cx="265" cy="104" r="2.4" fill="#38bdf8"/>
+
+            <!-- MCU core, center -->
+            <rect x="165" y="195" width="130" height="70" rx="8" fill="#1e2c4d" stroke="#22c55e" stroke-width="1.4"/>
+            <text x="230" y="222" text-anchor="middle" class="comp-label" fill="#22c55e">ESP32 / ARDUINO MEGA</text>
+            <text x="230" y="236" text-anchor="middle" class="comp-sub">microcontroller core</text>
+            <rect x="180" y="243" width="14" height="14" fill="none" stroke="#28395d"/>
+            <rect x="200" y="243" width="14" height="14" fill="none" stroke="#28395d"/>
+            <rect x="246" y="243" width="14" height="14" fill="none" stroke="#28395d"/>
+            <rect x="266" y="243" width="14" height="14" fill="none" stroke="#28395d"/>
+
+            <!-- temp sensor + SSR, left -->
+            <rect x="30" y="200" width="115" height="70" rx="8" class="comp-box" stroke-width="1.3"/>
+            <text x="87" y="223" text-anchor="middle" class="comp-label">DS18B20 + SSR</text>
+            <text x="87" y="237" text-anchor="middle" class="comp-sub">waterproof temp · relay</text>
+            <circle cx="55" cy="252" r="6" fill="none" stroke="#38bdf8" stroke-width="1.6"/>
+            <rect x="70" y="247" width="18" height="10" rx="2" fill="none" stroke="#22c55e" stroke-width="1.4"/>
+
+            <!-- motor driver + stirrer, right -->
+            <rect x="315" y="200" width="115" height="70" rx="8" class="comp-box" stroke-width="1.3"/>
+            <text x="372" y="223" text-anchor="middle" class="comp-label">L298N DRIVER</text>
+            <text x="372" y="237" text-anchor="middle" class="comp-sub">motor control</text>
+            <g class="spin-slow" style="transform-box: fill-box;">
+              <circle cx="372" cy="253" r="7" fill="none" stroke="#38bdf8" stroke-width="1.4"/>
+              <line x1="372" y1="246" x2="372" y2="260" stroke="#38bdf8" stroke-width="1.4"/>
+              <line x1="365" y1="253" x2="379" y2="253" stroke="#38bdf8" stroke-width="1.4"/>
+            </g>
+
+            <!-- bottom stirrer motor -->
+            <rect x="165" y="360" width="130" height="60" rx="8" class="comp-box" stroke-width="1.3"/>
+            <text x="230" y="382" text-anchor="middle" class="comp-label">MAGNETIC STIRRER</text>
+            <text x="230" y="396" text-anchor="middle" class="comp-sub">bottom-mounted motor</text>
+            <g class="spin-slow" style="transform-box: fill-box;">
+              <circle cx="230" cy="406" r="7" fill="none" stroke="#22c55e" stroke-width="1.4"/>
+              <line x1="223" y1="406" x2="237" y2="406" stroke="#22c55e" stroke-width="1.4"/>
+              <line x1="230" y1="399" x2="230" y2="413" stroke="#22c55e" stroke-width="1.4"/>
+            </g>
+
+            <!-- connector flow lines -->
+            <path class="flow-line" d="M230 110 L230 195" stroke="#38bdf8" stroke-width="2" fill="none"/>
+            <path class="flow-line slow" d="M145 235 L165 225" stroke="#38bdf8" stroke-width="2" fill="none"/>
+            <path class="flow-line slow" d="M315 235 L295 225" stroke="#38bdf8" stroke-width="2" fill="none"/>
+            <path class="flow-line" d="M230 265 L230 360" stroke="#22c55e" stroke-width="2" fill="none"/>
+          </svg>
+        </div>
+
+        <div class="side-col">
+          <div class="callout-card">
+            <h3>Component Map</h3>
+            <div class="legend" style="margin-top:10px;">
+              <div class="legend-item"><span class="legend-swatch" style="background:#38bdf8;"></span>Multi-channel E-Tongue probes</div>
+              <div class="legend-item"><span class="legend-swatch" style="background:#22c55e;"></span>ESP32 / Arduino Mega core</div>
+              <div class="legend-item"><span class="legend-swatch" style="background:#38bdf8;"></span>DS18B20 sensor + Solid State Relay</div>
+              <div class="legend-item"><span class="legend-swatch" style="background:#22c55e;"></span>L298N driver + stirrer motor</div>
+            </div>
+          </div>
+          <div class="note-card">
+            <span class="note-label">TECHNICAL NOTE</span>
+            <p>All hardware components are selected to keep total BOM cost under <span class="num">$40</span> (~<span class="num">₹3,000</span>).</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ SCENE 3 ============ -->
+    <section class="scene" id="scene-3">
+      <div class="scene-head">
+        <div class="scene-eyebrow"><span class="dot" style="background:#38bdf8;"></span>SCENE 3 · TECHNICAL METHODOLOGY</div>
+        <h1 class="scene-title">3. How It Works <span class="accent">(AI Quality Gate)</span></h1>
+      </div>
+
+      <div class="timeline">
+        <div class="tl-node">
+          <div class="tl-circle">1</div>
+          <div class="tl-label">E-Tongue chemical analysis samples raw voltage array [V1, V2, V3, V4]</div>
+        </div>
+        <div class="tl-line"></div>
+        <div class="tl-node">
+          <div class="tl-circle" style="border-color:#38bdf8; color:#38bdf8;">2</div>
+          <div class="tl-label">Embedded KNN / Random Forest model tests sample purity at the edge</div>
+        </div>
+        <div class="tl-line"></div>
+        <div class="tl-node">
+          <div class="tl-circle">✓</div>
+          <div class="tl-label">Live simulation verifies the result below</div>
+        </div>
+      </div>
+
+      <div class="sim-box">
+        <div class="sim-head">
+          <h3>Live Simulation — Herb Purity Check</h3>
+          <button class="run-btn" id="runCheckBtn">Run Herb Check</button>
+        </div>
+
+        <div class="voltage-row" id="voltageRow">
+          <div class="v-chip"><span class="v-name">V1</span><span class="v-val" id="v1">—</span></div>
+          <div class="v-chip"><span class="v-name">V2</span><span class="v-val" id="v2">—</span></div>
+          <div class="v-chip"><span class="v-name">V3</span><span class="v-val" id="v3">—</span></div>
+          <div class="v-chip"><span class="v-name">V4</span><span class="v-val" id="v4">—</span></div>
+        </div>
+
+        <div class="sim-progress-rail"><div class="sim-progress-fill" id="simProgressFill"></div></div>
+        <div class="sim-status" id="simStatus">Idle — press "Run Herb Check" to sample the chamber.</div>
+
+        <div class="sim-result" id="simResult">
+          <div class="check">✓</div>
+          <div class="sr-text">STATUS: PURE TULSI VERIFIED (98.4% Match)</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ SCENE 4 ============ -->
+    <section class="scene" id="scene-4">
+      <div class="scene-head">
+        <div class="scene-eyebrow"><span class="dot" style="background:#22c55e;"></span>SCENE 4 · PID EXTRACTION &amp; SAFETY CONTROL</div>
+        <h1 class="scene-title">4. Gentle <span class="accent">Bioactive Extraction</span></h1>
+      </div>
+
+      <div class="scene-grid">
+        <div class="diagram-panel">
+          <div class="gauge-wrap">
+            <svg viewBox="0 0 420 260" width="380">
+              <!-- gauge arc background 60-100 -->
+              <path d="M50 210 A160 160 0 0 1 370 210" fill="none" stroke="#28395d" stroke-width="14" stroke-linecap="round"/>
+              <!-- green safe zone 85-90 (approx segment near top-right of arc) -->
+              <path d="M245 55 A160 160 0 0 1 300 82" fill="none" stroke="#22c55e" stroke-width="14" stroke-linecap="round"/>
+              <!-- tick labels -->
+              <text x="50" y="235" class="comp-sub" font-size="11">60°C</text>
+              <text x="200" y="45" class="comp-sub" font-size="11" text-anchor="middle">80°C</text>
+              <text x="345" y="235" class="comp-sub" font-size="11" text-anchor="end">100°C</text>
+
+              <!-- needle -->
+              <g class="needle">
+                <line x1="210" y1="210" x2="290" y2="90" stroke="#38bdf8" stroke-width="4" stroke-linecap="round"/>
+                <circle cx="210" cy="210" r="9" fill="#182541" stroke="#38bdf8" stroke-width="2"/>
+              </g>
+            </svg>
+            <div class="gauge-readout">TEMPERATURE LOCK &nbsp; <span class="lockval" id="gaugeVal">87.4°C</span> &nbsp; · &nbsp; RANGE 85–90°C</div>
+          </div>
+
+          <div style="display:flex; gap:22px; margin-top:18px; align-items:center; flex-wrap:wrap; justify-content:center;">
+            <div style="display:flex; align-items:center; gap:10px;">
+              <svg width="30" height="30" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="#22c55e" stroke-width="1.6" class="stirrer-motor" style="transform-box:fill-box;"/><g class="stirrer-motor" style="transform-box:fill-box; transform-origin:center;"><line x1="12" y1="4" x2="12" y2="20" stroke="#22c55e" stroke-width="1.6"/><line x1="4" y1="12" x2="20" y2="12" stroke="#22c55e" stroke-width="1.6"/></g></svg>
+              <span style="font-family:'IBM Plex Mono'; font-size:12px; color:#9fb0cc;">STIRRER · 350 RPM</span>
+            </div>
+            <div class="interlock-row" id="interlockRow">
+              <span class="led" id="interlockLed"></span>
+              <span id="interlockText">SSR ONLINE — NORMAL HEATING</span>
+            </div>
+            <button class="interlock-btn" id="simLowWaterBtn">Simulate Low Water</button>
+          </div>
+        </div>
+
+        <div class="side-col">
+          <div class="callout-card">
+            <h3>Why 85–90°C</h3>
+            <div class="step-list" style="margin-top:10px;">
+              <div class="step-item">
+                <div class="step-badge">1</div>
+                <div class="step-text">PID control locks extraction between <b>85°C and 90°C</b>, preventing volatile oil loss that a harsh <b>100°C</b> boil would cause.</div>
+              </div>
+              <div class="step-item">
+                <div class="step-badge">2</div>
+                <div class="step-text">The magnetic stirrer rotates at <b>350 RPM</b> to keep coarse herb particles suspended for even extraction.</div>
+              </div>
+              <div class="step-item">
+                <div class="step-badge">3</div>
+                <div class="step-text">A dry-heating safety interlock <b>cuts the SSR</b> automatically if water level drops — try the button on the diagram.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <div class="footer-note">iKwath · Smart Kadha Brewing Machine — Interactive Visual Prototype — Team Prakriti Tech — SIH 2026 — PS SIH26048</div>
+</div>
+
+<script>
+(function(){
+  const totalScenes = 4;
+  let current = 1;
+  let playing = true;
+  const SCENE_DURATION = 8000; // ms per scene while autoplaying
+  let elapsed = 0;
+  let lastTick = null;
+  let rafId = null;
+
+  const tabs = document.querySelectorAll('.tab');
+  const scenes = document.querySelectorAll('.scene');
+  const progressFill = document.getElementById('progressFill');
+  const playPauseBtn = document.getElementById('playPauseBtn');
+  const playLabel = document.getElementById('playLabel');
+  const playIcon = document.getElementById('playIcon');
+
+  function setScene(n, resetTimer){
+    current = n;
+    tabs.forEach(t => t.classList.toggle('active', parseInt(t.dataset.scene) === n));
+    scenes.forEach(s => {
+      const isActive = s.id === 'scene-' + n;
+      if(isActive){
+        s.classList.add('active');
+        s.style.animation = 'none';
+        void s.offsetWidth;
+        s.style.animation = '';
+      } else {
+        s.classList.remove('active');
+      }
+    });
+    if(resetTimer !== false){ elapsed = 0; }
+  }
+
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      setScene(parseInt(tab.dataset.scene), true);
+    });
+  });
+
+  function tick(ts){
+    if(lastTick === null) lastTick = ts;
+    const dt = ts - lastTick;
+    lastTick = ts;
+    if(playing){
+      elapsed += dt;
+      const pct = Math.min(100, (elapsed / SCENE_DURATION) * 100);
+      progressFill.style.width = pct + '%';
+      if(elapsed >= SCENE_DURATION){
+        const next = current >= totalScenes ? 1 : current + 1;
+        setScene(next, true);
+      }
+    }
+    rafId = requestAnimationFrame(tick);
+  }
+  rafId = requestAnimationFrame(tick);
+
+  playPauseBtn.addEventListener('click', () => {
+    playing = !playing;
+    if(playing){
+      playLabel.textContent = 'Pause';
+      playIcon.innerHTML = '<path d="M6 4L20 12L6 20V4Z" fill="currentColor"/>';
+      playPauseBtn.classList.remove('paused');
+    } else {
+      playLabel.textContent = 'Auto-Play';
+      playIcon.innerHTML = '<rect x="6" y="4" width="4" height="16" fill="currentColor"/><rect x="14" y="4" width="4" height="16" fill="currentColor"/>';
+      playPauseBtn.classList.add('paused');
+    }
+  });
+
+  /* ---------- Scene 1: power / brewing state + OLED temp ---------- */
+  const scene1Root = document.getElementById('scene1Root');
+  const powerBtnHtml = document.getElementById('powerButtonHtml');
+  const oledTemp = document.getElementById('oledTemp');
+  const oledStatus = document.getElementById('oledStatus');
+  const liquidLevel = document.getElementById('liquidLevel');
+  let isBrewing = true;
+  let baseTemp = 88.0;
+
+  function paintBrewState(){
+    scene1Root.classList.toggle('is-brewing', isBrewing);
+    if(isBrewing){
+      oledStatus.innerHTML = 'BREWING<tspan class="oled-cursor">_</tspan>';
+      oledTemp.setAttribute('fill', '#38bdf8');
+      liquidLevel.setAttribute('opacity', '0.85');
+    } else {
+      oledStatus.innerHTML = 'STANDBY<tspan class="oled-cursor">_</tspan>';
+      oledTemp.setAttribute('fill', '#64789e');
+      liquidLevel.setAttribute('opacity', '0.35');
+    }
+  }
+  powerBtnHtml.addEventListener('click', () => { isBrewing = !isBrewing; paintBrewState(); });
+
+  setInterval(() => {
+    if(!isBrewing) return;
+    const jitter = (Math.random() * 1.4 - 0.7);
+    const t = (baseTemp + jitter).toFixed(1);
+    oledTemp.textContent = t + '°C';
+  }, 900);
+
+  document.querySelectorAll('#scene1Root .hotspot[data-label]').forEach(hs => {
+    hs.addEventListener('mouseenter', () => hs.style.filter = 'drop-shadow(0 0 6px rgba(56,189,248,0.5))');
+    hs.addEventListener('mouseleave', () => hs.style.filter = '');
+    const t = document.createElementNS('http://www.w3.org/2000/svg','title');
+    t.textContent = hs.getAttribute('data-label');
+    hs.appendChild(t);
+  });
+
+  /* ---------- Scene 3: herb check simulation ---------- */
+  const runBtn = document.getElementById('runCheckBtn');
+  const simFill = document.getElementById('simProgressFill');
+  const simStatus = document.getElementById('simStatus');
+  const simResult = document.getElementById('simResult');
+  const vEls = [document.getElementById('v1'), document.getElementById('v2'), document.getElementById('v3'), document.getElementById('v4')];
+  let vTicker = null;
+
+  function randomVoltage(){ return (1.4 + Math.random() * 1.8).toFixed(2) + 'V'; }
+
+  runBtn.addEventListener('click', () => {
+    runBtn.disabled = true;
+    runBtn.textContent = 'Sampling…';
+    simResult.classList.remove('show');
+    simFill.style.width = '0%';
+    simStatus.textContent = 'Stage 1 — E-Tongue sampling raw voltage array…';
+
+    vTicker = setInterval(() => { vEls.forEach(el => el.textContent = randomVoltage()); }, 90);
+
+    setTimeout(() => {
+      clearInterval(vTicker);
+      vEls.forEach(el => el.textContent = randomVoltage());
+      runBtn.textContent = 'Classifying…';
+      simStatus.textContent = 'Stage 2 — Edge AI (KNN / Random Forest) classifying sample…';
+      simFill.style.width = '100%';
+    }, 1200);
+
+    setTimeout(() => {
+      simStatus.textContent = 'Classification complete.';
+      simResult.classList.add('show');
+      runBtn.disabled = false;
+      runBtn.textContent = 'Run Again';
+    }, 2700);
+  });
+
+  /* ---------- Scene 4: gauge readout + safety interlock ---------- */
+  const gaugeVal = document.getElementById('gaugeVal');
+  const interlockLed = document.getElementById('interlockLed');
+  const interlockText = document.getElementById('interlockText');
+  const interlockRow = document.getElementById('interlockRow');
+  const simLowWaterBtn = document.getElementById('simLowWaterBtn');
+  let interlockTripped = false;
+
+  setInterval(() => {
+    if(interlockTripped) return;
+    const t = (85 + Math.random() * 5).toFixed(1);
+    gaugeVal.textContent = t + '°C';
+  }, 1000);
+
+  simLowWaterBtn.addEventListener('click', () => {
+    if(interlockTripped) return;
+    interlockTripped = true;
+    interlockLed.classList.add('alert');
+    interlockText.textContent = 'DRY-HEAT PROTECTION: SSR OFF';
+    interlockRow.classList.add('alert-text');
+    gaugeVal.textContent = 'COOLING';
+    simLowWaterBtn.disabled = true;
+
+    setTimeout(() => {
+      interlockTripped = false;
+      interlockLed.classList.remove('alert');
+      interlockText.textContent = 'SSR ONLINE — NORMAL HEATING';
+      interlockRow.classList.remove('alert-text');
+      simLowWaterBtn.disabled = false;
+    }, 4000);
+  });
+
+  paintBrewState();
+})();
+</script>
+</body>
+</html>
